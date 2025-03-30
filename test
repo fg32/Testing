@@ -68,108 +68,115 @@ do
 
     
 	Toggle:OnChanged(function()
-		if Options.MyToggle.Value then
-				for i, childrik in ipairs(game.workspace.Entities:GetDescendants()) do
-					if childrik:FindFirstChild("Humanoid") then
-						if not childrik:FindFirstChild("Scripts") then
-							coroutine.wrap(function()
-								while true do
-									if childrik ~= game.Players.LocalPlayer.Character then
-									if not childrik.HumanoidRootPart:FindFirstChild("SurfaceGui") then
-										local espframe = { first = Instance.new("SurfaceGui",childrik.HumanoidRootPart) , second = Instance.new("SurfaceGui", childrik.HumanoidRootPart) }
-										espframe.first.Name = "SurfaceGui1"
-										espframe.first.AlwaysOnTop = true
-										espframe.second.AlwaysOnTop = true
-										local frame = Instance.new("Frame", espframe.first)
-										frame.Position = UDim2.new(-0.5, 0,-2, 0)
-										frame.Active = true
-										frame.Size = UDim2.new(2, 2,2, 2)
-										frame.BackgroundTransparency = 1
-										local text = Instance.new("TextLabel", frame)
-										text.BackgroundTransparency = 1
-										text.Size = UDim2.new(1,0,1,0)
-										text.TextColor3 = Color3.fromRGB(255,255,255)
-										text.TextStrokeTransparency = 0
-										text.TextStrokeColor3 = Color3.fromRGB(0,0,0)
-										text.TextScaled = true
-										text.Text = "test"
-										text.RichText = true
-										text.LineHeight = 3
-										text.Font = Enum.Font.LuckiestGuy
-										local frame2 = Instance.new("Frame", espframe.second)
-										espframe.second.Face = "Back"
-										frame2.Position = UDim2.new(-0.5, 0,-2, 0)
-										frame2.Active = true
-										frame2.Size = UDim2.new(2, 2,2, 2)
-										frame2.BackgroundTransparency = 1
-										local text2 = Instance.new("TextLabel", frame2)
-										text2.BackgroundTransparency = 1
-										text2.Size = UDim2.new(1,0,1,0)
-										text2.TextColor3 = Color3.fromRGB(255,255,255)
-										text2.TextStrokeTransparency = 0
-										text2.TextStrokeColor3 = Color3.fromRGB(0,0,0)
-										text2.TextScaled = true
-										text2.Text = "test"
-										text2.RichText = true
-										text2.LineHeight = 3
-										text2.Font = Enum.Font.LuckiestGuy
+		local NPCFolder = workspace:FindFirstChild("Entities")
+		local trackedNPCs = {}
+		local connections = {}
 
-									end
-									local f2 = childrik.HumanoidRootPart.SurfaceGui.Frame
-									local f1 = childrik.HumanoidRootPart.SurfaceGui1.Frame
-									local botht = f1.TextLabel
-									local botht2 = f2.TextLabel
-									f1.TextLabel.Text, f2.TextLabel.Text = childrik.Humanoid.Health.." / "..childrik.Humanoid.MaxHealth, childrik.Humanoid.Health.."/"..childrik.Humanoid.MaxHealth
-									if ((childrik.Humanoid.Health) ) >= (childrik.Humanoid.MaxHealth / 3 * 2) then 
-										botht.TextColor = BrickColor.new("Bright green")  -- no
-										botht2.TextColor = BrickColor.new("Bright green")  -- and this
-									elseif ((childrik.Humanoid.Health) ) >= (childrik.Humanoid.MaxHealth / 3 ) then
-										botht.TextColor = BrickColor.new("Bright yellow")  
-										botht2.TextColor = BrickColor.new("Bright yellow")  
-									elseif (childrik.Humanoid.Health ) < (childrik.Humanoid.MaxHealth / 3) then 
-										botht.TextColor = BrickColor.new("Bright red")
-										botht2.TextColor = BrickColor.new("Bright red") end
-								end
-									wait(0.5)
-								end
-							end)()
-							
-							if childrik ~= game.Players.LocalPlayer.Character then
-								if childrik.HumanoidRootPart:FindFirstChild("SurfaceGui") then
-									local destroycodehere = childrik.HumanoidRootPart:FindFirstChild("SurfaceGui")
-									destroycodehere.Enabled = true
-									local destroycodehere2 = childrik.HumanoidRootPart:FindFirstChild("SurfaceGui1")
-									destroycodehere2.Enabled = true
-								end
-							end	
-						
-						end
-					end
+		-- Функция проверки NPC
+		local function isNPC(character)
+			return character:FindFirstChild("Scripts") == nil
+		end
+
+		-- Основная функция создания тегов
+		local function createNPCTag(npcModel)
+			if not Options.MyToggle.Value then return end
+			if trackedNPCs[npcModel] then return end
+			
+			trackedNPCs[npcModel] = true
+			
+			local humanoid = npcModel:FindFirstChildOfClass("Humanoid")
+			local head = npcModel:FindFirstChild("Head")
+			
+			if not humanoid or not head then return end
+			if head:FindFirstChild("NPC_Nametag") then return end
+
+			-- Создаем BillboardGui
+			local billboard = Instance.new("BillboardGui")
+			billboard.Name = "NPC_Nametag"
+			billboard.Adornee = head
+			billboard.Size = UDim2.new(4, 0, 1.5, 0)
+			billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+			billboard.AlwaysOnTop = true
+
+			local textLabel = Instance.new("TextLabel")
+			textLabel.Size = UDim2.new(1, 0, 1, 0)
+			textLabel.Font = Enum.Font.SourceSansBold
+			textLabel.TextSize = 20
+			textLabel.TextStrokeTransparency = 0.5
+			textLabel.BackgroundTransparency = 1
+			textLabel.Parent = billboard
+
+			-- Функция обновления здоровья
+			local function updateHealth()
+				if billboard.Parent then
+					textLabel.Text = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
+					local healthPercent = humanoid.Health / humanoid.MaxHealth
+					textLabel.TextColor3 = healthPercent > 0.66 and Color3.new(0,1,0)
+						or healthPercent > 0.33 and Color3.new(1,1,0)
+						or Color3.new(1,0,0)
 				end
-			 
+			end
 
-		elseif not Options.MyToggle.Value then
-			for i, childrik in ipairs(game.workspace.Entities:GetDescendants()) do
-				if childrik:FindFirstChild("Humanoid") then
-					if not childrik:FindFirstChild("Scripts") then
-						if childrik ~= game.Players.LocalPlayer.Character then
-							if childrik.HumanoidRootPart:FindFirstChild("SurfaceGui") then
+			-- Подключение событий
+			local healthConn = humanoid:GetPropertyChangedSignal("Health"):Connect(updateHealth)
+			local diedConn = humanoid.Died:Connect(function()
+				billboard:Destroy()
+			end)
 
-								-- Yo, make destroy code go here.
-								local destroycodehere = childrik.HumanoidRootPart:FindFirstChild("SurfaceGui")
-								destroycodehere.Enabled = false
-								local destroycodehere2 = childrik.HumanoidRootPart:FindFirstChild("SurfaceGui1")
-								destroycodehere2.Enabled = false
-							end
+			updateHealth()
+			billboard.Parent = head
+
+			connections[npcModel] = {healthConn, diedConn}
+		end
+
+		-- Функция обработки NPC
+		local function handleNPC(child)
+			if child:IsA("Model") and isNPC(child) then
+				createNPCTag(child)
+			end
+		end
+
+		if Options.MyToggle.Value and NPCFolder then
+			-- Обработка существующих NPC
+			for _, child in ipairs(NPCFolder:GetChildren()) do
+				handleNPC(child)
+			end
+
+			-- Отслеживание новых NPC
+			connections.childAdded = NPCFolder.ChildAdded:Connect(handleNPC)
+
+		else
+			-- Удаление всех тегов
+			if NPCFolder then
+				for _, npc in ipairs(NPCFolder:GetChildren()) do
+					if npc:IsA("Model") and npc:FindFirstChild("Head") then
+						local tag = npc.Head:FindFirstChild("NPC_Nametag")
+						if tag then
+							tag:Destroy()
 						end
 					end
 				end
 			end
-		Wait(0.5)
+
+			-- Отключение всех соединений
+			for npcModel, conns in pairs(connections) do
+				if npcModel ~= "childAdded" then
+					for _, conn in ipairs(conns) do
+						conn:Disconnect()
+					end
+				end
+			end
+			if connections.childAdded then
+				connections.childAdded:Disconnect()
+			end
+
+			-- Сброс таблиц
+			trackedNPCs = {}
+			connections = {}
 		end
 	end)
 
-    Options.MyToggle:SetValue(false)
+	Options.MyToggle:SetValue(false)
 
 
     
@@ -357,3 +364,5 @@ Fluent:Notify({
 -- You can use the SaveManager:LoadAutoloadConfig() to load a config
 -- which has been marked to be one that auto loads!
 SaveManager:LoadAutoloadConfig()
+
+
