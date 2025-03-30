@@ -62,8 +62,6 @@ do
         end
     })
 
-
-
     local Toggle = Tabs.Main:AddToggle("MyToggle", {Title = "npcesp", Default = false })
 
     
@@ -100,21 +98,26 @@ do
 
 			local textLabel = Instance.new("TextLabel")
 			textLabel.Size = UDim2.new(1, 0, 1, 0)
+			textLabel.Text = "test"
 			textLabel.Font = Enum.Font.SourceSansBold
 			textLabel.TextSize = 20
+			textLabel.TextColor3 = Color3.new(1, 1, 1)
+			textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
 			textLabel.TextStrokeTransparency = 0.5
 			textLabel.BackgroundTransparency = 1
 			textLabel.Parent = billboard
+			textLabel.TextWrapped = false
 
 			-- Функция обновления здоровья
 			local function updateHealth()
-				if billboard.Parent then
-					textLabel.Text = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
-					local healthPercent = humanoid.Health / humanoid.MaxHealth
-					textLabel.TextColor3 = healthPercent > 0.66 and Color3.new(0,1,0)
-						or healthPercent > 0.33 and Color3.new(1,1,0)
-						or Color3.new(1,0,0)
-				end
+				local texte = "NPC"
+				local hps = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
+				textLabel.Text = texte.."\n"..hps
+				local healthPercent = humanoid.Health / humanoid.MaxHealth
+				textLabel.TextColor3 = healthPercent > 0.66 and Color3.new(0,1,0)
+					or healthPercent > 0.33 and Color3.new(1,1,0)
+					or Color3.new(1,0,0)
+				
 			end
 
 			-- Подключение событий
@@ -177,6 +180,204 @@ do
 	end)
 
 	Options.MyToggle:SetValue(false)
+
+	local IsRace = Tabs.Main:AddToggle("OtherRace", {Title = "Show Race", Default = false })
+
+	IsRace:OnChanged(function(parameters)
+		if Options.OtherRace.Value then
+			IsRaceState = true
+		elseif not Options.OtherRace.Value then
+			IsRaceState = false
+		end
+	end)
+
+	Options.OtherRace:SetValue(false)
+
+	local IsHunger = Tabs.Main:AddToggle("OtherHunger", {Title = "Show Hunger", Default = false })
+
+	IsHunger:OnChanged(function(parameters)
+		if Options.OtherHunger.Value then
+			IsHungerState = true
+		elseif not Options.OtherHunger.Value then
+			IsHungerState = false
+		end
+	end)
+
+	Options.OtherHunger:SetValue(false)
+
+	local IsDistance = Tabs.Main:AddToggle("OtherDistance", {Title = "Show Distance", Default = false })
+
+	IsDistance:OnChanged(function(parameters)
+		if Options.OtherDistance.Value then
+			IsDistanceState = true
+		elseif not Options.OtherDistance.Value then
+			IsDistanceState = false
+		end
+	end)
+
+	Options.OtherDistance:SetValue(false)
+
+    local PToggle = Tabs.Main:AddToggle("MyPToggle", {Title = "Player esp", Default = false })
+
+	PToggle:OnChanged(function()
+		local Players = game:GetService("Players")
+		local LocalPlayer = Players.LocalPlayer
+		local connections = {}
+
+		while Options.MyPToggle.Value do
+			Wait(0.1)
+			local function createNametag(player)
+				if player == LocalPlayer then return end
+
+				local function attachToCharacter(character)
+					if not character:IsDescendantOf(workspace) then return end
+					
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if not humanoid or humanoid.Health <= 0 then return end
+
+					-- Safety check for head
+					local head
+					pcall(function()
+						head = character:WaitForChild("Head", 2)
+					end)
+					if not head then return end
+
+					-- Remove old tag
+
+
+					-- Create new BillboardGui
+					function namee(parameters)
+					
+						if not head:FindFirstChild(player.Name .. "_Nametag") then
+							local billboard = Instance.new("BillboardGui")
+							billboard.Name = player.Name .. "_Nametag"
+							billboard.Adornee = head
+							billboard.Size = UDim2.new(4, 0, 2.5, 0)
+							billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+							billboard.AlwaysOnTop = true
+							billboard.Active = true
+							billboard.ResetOnSpawn = false
+							billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+							-- Create TextLabel
+							local textLabel = Instance.new("TextLabel")
+							textLabel.Size = UDim2.new(1, 0, 1, 0)
+							textLabel.Text = "test"
+							textLabel.Font = Enum.Font.SourceSansBold
+							textLabel.TextSize = 14
+							textLabel.TextColor3 = Color3.new(1, 1, 1)
+							textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+							textLabel.TextStrokeTransparency = 0.5
+							textLabel.BackgroundTransparency = 1
+							textLabel.Parent = billboard
+							textLabel.TextWrapped = false
+
+							billboard.Parent = head
+						end
+					end
+
+				
+					
+					namee()
+					local tagg = head:FindFirstChild(player.Name .. "_Nametag")
+					local botht = tagg.TextLabel
+					if IsRaceState then
+						local RS = humanoid.Parent.Race.Value
+						RaceSay = "\n"..RS
+					else
+						RaceSay = " "
+					end
+					if IsHungerState then
+						local HS = math.floor(humanoid.Parent.Hunger.Value + 0.5)
+						HungerSay = "\n"..HS
+					else
+						HungerSay = " "
+					end
+					if IsDistanceState then
+						local DS = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - humanoid.Parent.HumanoidRootPart.Position).Magnitude)
+						DistanceSay = "\n"..DS.."m"
+					else
+						DistanceSay = " "
+					end
+					local maxH = math.floor(humanoid.MaxHealth + 0.5)
+					local JustH = math.floor(humanoid.MaxHealth + 0.5)
+					local PName = humanoid.Parent.Name
+					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay
+					
+					botht.Text = fulltext
+					if ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 * 2) then 
+						botht.TextColor = BrickColor.new("Bright green")  -- no
+					elseif ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 ) then
+						botht.TextColor = BrickColor.new("Bright yellow")  
+					elseif (humanoid.Health ) < (humanoid.MaxHealth / 3) then 
+						botht.TextColor = BrickColor.new("Bright red") end
+					
+
+					
+					local Textes head:FindFirstChild(player.Name .. "_Nametag")
+					
+					-- Track humanoid state
+					humanoid.Died:Connect(function()
+						if billboard then billboard:Destroy() end
+						Wait(5)
+						namee()
+					end)
+				end
+
+				local function characterAdded(character)
+					task.spawn(attachToCharacter, character)
+				end
+
+				if player.Character then
+					characterAdded(player.Character)
+				end
+				
+				connections[player] = {
+					player.CharacterAdded:Connect(characterAdded),
+					player.CharacterRemoving:Connect(function(char)
+						local head = char:FindFirstChild("Head")
+						if head then
+							local oldTag = head:FindFirstChild(player.Name .. "_Nametag")
+							if oldTag then oldTag:Destroy() end
+						end
+					end)
+				}
+			end
+
+			-- Existing players
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer then
+					createNametag(player)
+				end
+			end
+
+			-- New players
+			Players.PlayerAdded:Connect(createNametag)
+
+			-- Player leaving
+			Players.PlayerRemoving:Connect(function(player)
+				if connections[player] then
+					for _, conn in pairs(connections[player]) do
+						conn:Disconnect()
+					end
+					connections[player] = nil
+				end
+			end)
+
+		end
+
+		-- Cleanup
+		for _, player in pairs(Players:GetPlayers()) do
+			if player.Character and player.Character:FindFirstChild("Head") then
+				local head = player.Character.Head
+				local tag = head:FindFirstChild(player.Name .. "_Nametag")
+				if tag then tag:Destroy() end
+			end
+			
+		end
+	end)
+
+    Options.MyPToggle:SetValue(false)
 
 
     
