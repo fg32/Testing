@@ -300,7 +300,7 @@ do
 						DistanceSay = " "
 					end
 					local maxH = math.floor(humanoid.MaxHealth + 0.5)
-					local JustH = math.floor(humanoid.MaxHealth + 0.5)
+					local JustH = math.floor(humanoid.Health + 0.5)
 					local PName = humanoid.Parent.Name
 					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay
 					
