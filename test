@@ -371,9 +371,9 @@ do
 							elseif RS == "7" then
 								IsRankSay = "\n".."First Class"
 							elseif RS == "8" then
-								IsRankSay = "\n".."Associate Special"
+								IsRankSay = "\n".."8 RANK IS REAL NO WAY"
 							elseif RS == "9" then
-								IsRankSay = "\n".."9 RANK IS REAL NO WAY"
+								IsRankSay = "\n".."Associate Special"
 							elseif RS == "10" then
 								IsRankSay = "\n".."Special Class"
 							else 
