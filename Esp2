@@ -1,0 +1,697 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Title = "Fluent " .. Fluent.Version,
+    SubTitle = "by dawid",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true, -- The blur may be detectable, setting this to false disables blur entirely
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+})
+
+--Fluent provides Lucide Icons https://lucide.dev/icons/ for the tabs, icons are optional
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+
+local Options = Fluent.Options
+
+do
+    Fluent:Notify({
+        Title = "Notification",
+        Content = "This is a notification",
+        SubContent = "SubContent", -- Optional
+        Duration = 5 -- Set to nil to make the notification not disappear
+    })
+
+
+
+    Tabs.Main:AddParagraph({
+        Title = "Paragraph",
+        Content = "This is a paragraph.\nSecond line!"
+    })
+
+
+
+    Tabs.Main:AddButton({
+        Title = "Button",
+        Description = "Very important button",
+        Callback = function()
+            Window:Dialog({
+                Title = "Title",
+                Content = "This is a dialog",
+                Buttons = {
+                    {
+                        Title = "Confirm",
+                        Callback = function()
+                            print("Confirmed the dialog.")
+                        end
+                    },
+                    {
+                        Title = "Cancel",
+                        Callback = function()
+                            print("Cancelled the dialog.")
+                        end
+                    }
+                }
+            })
+        end
+    })
+
+    local Toggle = Tabs.Main:AddToggle("MyToggle", {Title = "npcesp", Default = false })
+
+    
+	Toggle:OnChanged(function()
+		local NPCFolder = workspace:WaitForChild("Entities")
+		local trackedNPCs = {}
+		local connections = {
+			childAdded = nil,
+			childRemoved = nil,
+			npcConnections = {}
+		}
+
+		-- Проверка на NPC (у игроков есть папка Scripts)
+		local function isNPC(character)
+			return character:FindFirstChild("Scripts") == nil
+		end
+
+		local function createNPCTag(npcModel)
+			if not Options.MyToggle.Value then return end
+			if trackedNPCs[npcModel] then return end
+
+			trackedNPCs[npcModel] = true
+
+			-- Основные компоненты
+			local humanoid = npcModel:FindFirstChildOfClass("Humanoid")
+			local head = npcModel:FindFirstChild("Head")
+			local ragdollColliders = npcModel:FindFirstChild("RagdollColliders")
+
+			-- Проверка минимальных требований
+			if not humanoid or not head then
+				trackedNPCs[npcModel] = nil
+				return
+			end
+
+			-- Проверка на существующий тег
+			if head:FindFirstChild("NPC_Nametag") then return end
+
+			-- Создание визуальных элементов
+			local billboard = Instance.new("BillboardGui")
+			billboard.Name = "NPC_Nametag"
+			billboard.Adornee = head
+			billboard.Size = UDim2.new(4, 0, 1.5, 0)
+			billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+			billboard.AlwaysOnTop = true
+
+			local textLabel = Instance.new("TextLabel")
+			textLabel.Size = UDim2.new(1, 0, 1, 0)
+			
+			textLabel.Font = Enum.Font.SourceSansBold
+			textLabel.TextSize = 10
+			textLabel.TextColor3 = Color3.new(1, 1, 1)
+			textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+			textLabel.TextStrokeTransparency = 0.5
+			textLabel.BackgroundTransparency = 1
+			textLabel.Parent = billboard
+
+			-- Функция проверки состояния NPC
+			local function isNPCValid()
+				return humanoid and humanoid.Health > 0 and not (ragdollColliders and #ragdollColliders:GetChildren() == 0)
+			end
+			local PontsNpc = " "
+			if npcModel.Race.Value == "Ghoul" then
+				PontsNpc = "GH"
+			elseif npcModel.Race.Value == "Human" then
+				PontsNpc = "HU"
+			else
+				PontsNpc = "Fail"
+			end
+			-- Обновление интерфейса
+			local function updateUI()
+				if not isNPCValid() then
+					billboard:Destroy()
+					return
+				end
+			
+
+				local hps = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
+				textLabel.Text = PontsNpc.."\n" .. hps
+				textLabel.TextColor3 = humanoid.Health/humanoid.MaxHealth > 0.5 
+					and Color3.new(0,1,0) 
+					or Color3.new(1,0,0)
+			end
+
+			-- Обработчики событий
+			local function cleanUp()
+				billboard:Destroy()
+				if connections.npcConnections[npcModel] then
+					for _, conn in pairs(connections.npcConnections[npcModel]) do
+						conn:Disconnect()
+					end
+					connections.npcConnections[npcModel] = nil
+				end
+				trackedNPCs[npcModel] = nil
+			end
+
+			-- Подписки на события
+			local conn1 = humanoid:GetPropertyChangedSignal("Health"):Connect(updateUI)
+			local conn2 = humanoid.Died:Connect(cleanUp)
+			local conn3 = ragdollColliders and ragdollColliders.ChildRemoved:Connect(updateUI)
+			local conn4 = game:GetService("RunService").Heartbeat:Connect(updateUI)
+
+			connections.npcConnections[npcModel] = {conn1, conn2, conn3, conn4}
+
+			-- Первоначальная настройка
+			updateUI()
+			billboard.Parent = head
+		end
+
+		-- Обработчики добавления/удаления NPC
+		local function handleChildAdded(child)
+			if child:IsA("Model") and isNPC(child) then
+				createNPCTag(child)
+			end
+		end
+
+		local function handleChildRemoved(child)
+			if connections.npcConnections[child] then
+				for _, conn in pairs(connections.npcConnections[child]) do
+					conn:Disconnect()
+				end
+				connections.npcConnections[child] = nil
+			end
+			trackedNPCs[child] = nil
+		end
+
+		if Options.MyToggle.Value then
+			-- Инициализация для существующих NPC
+			for _, child in ipairs(NPCFolder:GetChildren()) do
+				handleChildAdded(child)
+			end
+
+			-- Подписка на новые события
+			connections.childAdded = NPCFolder.ChildAdded:Connect(handleChildAdded)
+			connections.childRemoved = NPCFolder.ChildRemoved:Connect(handleChildRemoved)
+		else
+			-- Очистка при выключении
+			if connections.childAdded then connections.childAdded:Disconnect() end
+			if connections.childRemoved then connections.childRemoved:Disconnect() end
+			
+			for npcModel, conns in pairs(connections.npcConnections) do
+				for _, conn in pairs(conns) do
+					conn:Disconnect()
+				end
+			end
+			
+			for _, npc in ipairs(NPCFolder:GetChildren()) do
+				if npc:FindFirstChild("Head") then
+					local tag = npc.Head:FindFirstChild("NPC_Nametag")
+					if tag then tag:Destroy() end
+				end
+			end
+			
+			trackedNPCs = {}
+			connections.npcConnections = {}
+		end
+	end)
+
+	Options.MyToggle:SetValue(false)
+
+	local IsHunger = Tabs.Main:AddToggle("OtherHunger", {Title = "Show Hunger", Default = false })
+
+	IsHunger:OnChanged(function(parameters)
+		if Options.OtherHunger.Value then
+			IsHungerState = true
+		elseif not Options.OtherHunger.Value then
+			IsHungerState = false
+		end
+	end)
+
+	Options.OtherHunger:SetValue(false)
+
+	local IsDistance = Tabs.Main:AddToggle("OtherDistance", {Title = "Show Distance", Default = false })
+
+	IsDistance:OnChanged(function(parameters)
+		if Options.OtherDistance.Value then
+			IsDistanceState = true
+		elseif not Options.OtherDistance.Value then
+			IsDistanceState = false
+		end
+	end)
+
+	Options.OtherDistance:SetValue(false)
+
+	local IsRank = Tabs.Main:AddToggle("OtherRank", {Title = "Show Rank", Default = false })
+
+	IsRank:OnChanged(function(parameters)
+		if Options.OtherRank.Value then
+			IsRankState = true
+		elseif not Options.OtherRank.Value then
+			IsRankState = false
+		end
+	end)
+
+	Options.OtherRank:SetValue(false)
+
+	--[[local IsWeapon = Tabs.Main:AddToggle("OtherWeapon", {Title = "Show Weapon Type", Default = false })
+
+	IsWeapon:OnChanged(function(parameters)
+		if Options.OtherWeapon.Value then
+			IsWeaponState = true
+		elseif not Options.OtherWeapon.Value then
+			IsWeaponState = false
+		end
+	end)
+
+	Options.OtherWeapon:SetValue(false)]]
+
+    local PToggle = Tabs.Main:AddToggle("MyPToggle", {Title = "Player esp", Default = false })
+
+	PToggle:OnChanged(function()
+		local Players = game:GetService("Players")
+		local LocalPlayer = Players.LocalPlayer
+		local connections = {}
+		local Try = false
+
+		while Options.MyPToggle.Value do
+			Wait(0.1)
+			local function createNametag(player)
+				if player == LocalPlayer then return end
+
+				local function attachToCharacter(character)
+					if not character:IsDescendantOf(workspace) then return end
+					
+					local humanoid = character:FindFirstChildOfClass("Humanoid")
+					if not humanoid or humanoid.Health <= 0 then return end
+
+					-- Safety check for head
+					local head
+					pcall(function()
+						head = character:WaitForChild("Head", 2)
+					end)
+					if not head then return end
+
+					-- Remove old tag
+
+
+					-- Create new BillboardGui
+					function namee(parameters)
+					
+						if not head:FindFirstChild(player.Name .. "_Nametag") then
+							local billboard = Instance.new("BillboardGui")
+							billboard.Name = player.Name .. "_Nametag"
+							billboard.Adornee = head
+							billboard.Size = UDim2.new(4, 0, 2.5, 0)
+							billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+							billboard.AlwaysOnTop = true
+							billboard.Active = true
+							billboard.ResetOnSpawn = false
+							billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+							-- Create TextLabel
+							local textLabel = Instance.new("TextLabel")
+							textLabel.Size = UDim2.new(1, 0, 1, 0)
+							textLabel.Text = "test"
+							textLabel.Font = Enum.Font.SourceSansBold
+							textLabel.TextSize = 14
+							textLabel.TextColor3 = Color3.new(1, 1, 1)
+							textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+							textLabel.TextStrokeTransparency = 0.5
+							textLabel.BackgroundTransparency = 1
+							textLabel.Parent = billboard
+							textLabel.TextWrapped = false
+
+							billboard.Parent = head
+						end
+					end
+
+				
+					
+					namee()
+					local tagg = head:FindFirstChild(player.Name .. "_Nametag")
+					local botht = tagg.TextLabel
+					if IsRaceState then
+						local RS = humanoid.Parent.Race.Value
+						RaceSay = "\n"..RS
+					else
+						RaceSay = " "
+					end
+					if IsHungerState then
+						local HS = math.floor(humanoid.Parent.Hunger.Value + 0.5)
+						HungerSay = "\n"..HS
+					else
+						HungerSay = " "
+					end
+					if IsDistanceState then
+						local DS = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - humanoid.Parent.HumanoidRootPart.Position).Magnitude)
+						DistanceSay = "\n"..DS.."m"
+					else
+						DistanceSay = " "
+					end
+					if IsRankState then
+						local RS = humanoid.Parent.Rank.Value
+						local CS = humanoid.Parent.Race.Value
+						if CS == "Ghoul" then
+							if RS == "1" then
+								IsRankSay = "\n".."C"
+							elseif RS == "2" then
+								IsRankSay = "\n".."B"	
+							elseif RS == "3" then
+								IsRankSay = "\n".."B+"	
+							elseif RS == "4" then
+								IsRankSay = "\n".."A"	
+							elseif RS == "5" then
+								IsRankSay = "\n".."A+"	
+							elseif RS == "6" then
+								IsRankSay = "\n".."S"	
+							elseif RS == "7" then
+								IsRankSay = "\n".."S+"	
+							elseif RS == "8" then
+								IsRankSay = "\n".."SS"
+							elseif RS == "9" then
+								IsRankSay = "\n".."SS+"	
+							elseif RS == "10" then
+								IsRankSay = "\n".."SSS"
+							elseif RS == "0" then
+								IsRankSay = "\n".."Freshie"
+							else
+								IsRankSay = "Failed to load"		
+							end
+						elseif CS == "Human" then
+							if RS == "0" then
+								IsRankSay = "\n".."Freshie"
+							elseif RS == "1" then
+								IsRankSay = "\n".."3 Rank"
+							elseif RS == "2" then
+								IsRankSay = "\n".."2 Rank"
+							elseif RS == "3" then
+								IsRankSay = "\n".."1 Rank"
+							elseif RS == "4" then
+								IsRankSay = "\n".."Second Class"
+							elseif RS == "5" then
+								IsRankSay = "\n".."Semi-Associate First"
+							elseif RS == "6" then
+								IsRankSay = "\n".."Associate First"
+							elseif RS == "7" then
+								IsRankSay = "\n".."First Class"
+							elseif RS == "8" then
+								IsRankSay = "\n".."8 RANK IS REAL NO WAY"
+							elseif RS == "9" then
+								IsRankSay = "\n".."Associate Special"
+							elseif RS == "10" then
+								IsRankSay = "\n".."Special Class"
+							else 
+								IsRankSay = "\n".."Failed to load"
+							end
+						end
+					else
+						IsRankSay = " "
+					end
+					--[[if IsWeapon then
+						local WS = humanoid.Parent.Type.Value
+						if WS = "Fists" and not Try then
+							WeaponSay = "\n".."Fists"
+						elseif WS 
+						end
+						
+						
+					end]]
+					local maxH = math.floor(humanoid.MaxHealth + 0.5)
+					local JustH = math.floor(humanoid.Health + 0.5)
+					local PName = humanoid.Parent.Name
+					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay..IsRankSay
+					
+					botht.Text = fulltext
+					if ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 * 2) then 
+						botht.TextColor = BrickColor.new("Bright green")  -- no
+					elseif ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 ) then
+						botht.TextColor = BrickColor.new("Bright yellow")  
+					elseif (humanoid.Health ) < (humanoid.MaxHealth / 3) then 
+						botht.TextColor = BrickColor.new("Bright red") end
+					
+
+					
+					local Textes head:FindFirstChild(player.Name .. "_Nametag")
+					
+					-- Track humanoid state
+					humanoid.Died:Connect(function()
+						if billboard then billboard:Destroy() end
+						Wait(5)
+						namee()
+					end)
+				end
+
+				local function characterAdded(character)
+					task.spawn(attachToCharacter, character)
+				end
+
+				if player.Character then
+					characterAdded(player.Character)
+				end
+				
+				connections[player] = {
+					player.CharacterAdded:Connect(characterAdded),
+					player.CharacterRemoving:Connect(function(char)
+						local head = char:FindFirstChild("Head")
+						if head then
+							local oldTag = head:FindFirstChild(player.Name .. "_Nametag")
+							if oldTag then oldTag:Destroy() end
+						end
+					end)
+				}
+			end
+
+			-- Existing players
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player ~= LocalPlayer then
+					createNametag(player)
+				end
+			end
+
+			-- New players
+			Players.PlayerAdded:Connect(createNametag)
+
+			-- Player leaving
+			Players.PlayerRemoving:Connect(function(player)
+				if connections[player] then
+					for _, conn in pairs(connections[player]) do
+						conn:Disconnect()
+					end
+					connections[player] = nil
+				end
+			end)
+
+		end
+
+		-- Cleanup
+		for _, player in pairs(Players:GetPlayers()) do
+			if player.Character and player.Character:FindFirstChild("Head") then
+				local head = player.Character.Head
+				local tag = head:FindFirstChild(player.Name .. "_Nametag")
+				if tag then 
+				local others = tag:GetDescendants()
+				if connections[player] then
+					for _, conn in pairs(connections[player]) do
+						conn:Disconnect()
+					end
+					connections[player] = nil
+				end
+				tag:Destroy() 
+				end
+			end
+			
+		end
+	end)
+
+    Options.MyPToggle:SetValue(false)
+
+
+    
+    local Slider = Tabs.Main:AddSlider("Slider", {
+        Title = "Slider",
+        Description = "This is a slider",
+        Default = 2,
+        Min = 0,
+        Max = 5,
+        Rounding = 1,
+        Callback = function(Value)
+            print("Slider was changed:", Value)
+        end
+    })
+
+    Slider:OnChanged(function(Value)
+        print("Slider changed:", Value)
+    end)
+
+    Slider:SetValue(3)
+
+
+
+    local Dropdown = Tabs.Main:AddDropdown("Dropdown", {
+        Title = "Dropdown",
+        Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
+        Multi = false,
+        Default = 1,
+    })
+
+    Dropdown:SetValue("four")
+
+    Dropdown:OnChanged(function(Value)
+        print("Dropdown changed:", Value)
+    end)
+
+
+    
+    local MultiDropdown = Tabs.Main:AddDropdown("MultiDropdown", {
+        Title = "Dropdown",
+        Description = "You can select multiple values.",
+        Values = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"},
+        Multi = true,
+        Default = {"seven", "twelve"},
+    })
+
+    MultiDropdown:SetValue({
+        three = true,
+        five = true,
+        seven = false
+    })
+
+    MultiDropdown:OnChanged(function(Value)
+        local Values = {}
+        for Value, State in next, Value do
+            table.insert(Values, Value)
+        end
+        print("Mutlidropdown changed:", table.concat(Values, ", "))
+    end)
+
+
+
+    local Colorpicker = Tabs.Main:AddColorpicker("Colorpicker", {
+        Title = "Colorpicker",
+        Default = Color3.fromRGB(96, 205, 255)
+    })
+
+    Colorpicker:OnChanged(function()
+        print("Colorpicker changed:", Colorpicker.Value)
+    end)
+    
+    Colorpicker:SetValueRGB(Color3.fromRGB(0, 255, 140))
+
+
+
+    local TColorpicker = Tabs.Main:AddColorpicker("TransparencyColorpicker", {
+        Title = "Colorpicker",
+        Description = "but you can change the transparency.",
+        Transparency = 0,
+        Default = Color3.fromRGB(96, 205, 255)
+    })
+
+    TColorpicker:OnChanged(function()
+        print(
+            "TColorpicker changed:", TColorpicker.Value,
+            "Transparency:", TColorpicker.Transparency
+        )
+    end)
+
+
+
+    local Keybind = Tabs.Main:AddKeybind("Keybind", {
+        Title = "KeyBind",
+        Mode = "Toggle", -- Always, Toggle, Hold
+        Default = "LeftControl", -- String as the name of the keybind (MB1, MB2 for mouse buttons)
+
+        -- Occurs when the keybind is clicked, Value is `true`/`false`
+        Callback = function(Value)
+            print("Keybind clicked!", Value)
+        end,
+
+        -- Occurs when the keybind itself is changed, `New` is a KeyCode Enum OR a UserInputType Enum
+        ChangedCallback = function(New)
+            print("Keybind changed!", New)
+        end
+    })
+
+    -- OnClick is only fired when you press the keybind and the mode is Toggle
+    -- Otherwise, you will have to use Keybind:GetState()
+    Keybind:OnClick(function()
+        print("Keybind clicked:", Keybind:GetState())
+    end)
+
+    Keybind:OnChanged(function()
+        print("Keybind changed:", Keybind.Value)
+    end)
+
+    task.spawn(function()
+        while true do
+            wait(1)
+
+            -- example for checking if a keybind is being pressed
+            local state = Keybind:GetState()
+            if state then
+                print("Keybind is being held down")
+            end
+
+            if Fluent.Unloaded then break end
+        end
+    end)
+
+    Keybind:SetValue("MB2", "Toggle") -- Sets keybind to MB2, mode to Hold
+
+
+    local Input = Tabs.Main:AddInput("Input", {
+        Title = "Input",
+        Default = "Default",
+        Placeholder = "Placeholder",
+        Numeric = false, -- Only allows numbers
+        Finished = false, -- Only calls callback when you press enter
+        Callback = function(Value)
+            print("Input changed:", Value)
+        end
+    })
+
+    Input:OnChanged(function()
+        print("Input updated:", Input.Value)
+    end)
+end
+
+
+-- Addons:
+-- SaveManager (Allows you to have a configuration system)
+-- InterfaceManager (Allows you to have a interface managment system)
+
+-- Hand the library over to our managers
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+-- Ignore keys that are used by ThemeManager.
+-- (we dont want configs to save themes, do we?)
+SaveManager:IgnoreThemeSettings()
+
+-- You can add indexes of elements the save manager should ignore
+SaveManager:SetIgnoreIndexes({})
+
+-- use case for doing it this way:
+-- a script hub could have themes in a global folder
+-- and game configs in a separate folder per game
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "Fluent",
+    Content = "The script has been loaded.",
+    Duration = 8
+})
+
+-- You can use the SaveManager:LoadAutoloadConfig() to load a config
+-- which has been marked to be one that auto loads!
+SaveManager:LoadAutoloadConfig()
