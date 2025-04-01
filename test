@@ -373,6 +373,8 @@ do
 							elseif RS == "8" then
 								IsRankSay = "\n".."Associate Special"
 							elseif RS == "9" then
+								IsRankSay = "\n".."9 RANK IS REAL NO WAY"
+							elseif RS == "10" then
 								IsRankSay = "\n".."Special Class"
 							else 
 								IsRankSay = "\n".."Failed to load"
