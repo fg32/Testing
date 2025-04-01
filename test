@@ -217,12 +217,37 @@ do
 
 	Options.OtherDistance:SetValue(false)
 
+	local IsRank = Tabs.Main:AddToggle("OtherRank", {Title = "Show Rank", Default = false })
+
+	IsRank:OnChanged(function(parameters)
+		if Options.OtherRank.Value then
+			IsRankState = true
+		elseif not Options.OtherRank.Value then
+			IsRankState = false
+		end
+	end)
+
+	Options.OtherRank:SetValue(false)
+
+	--[[local IsWeapon = Tabs.Main:AddToggle("OtherWeapon", {Title = "Show Weapon Type", Default = false })
+
+	IsWeapon:OnChanged(function(parameters)
+		if Options.OtherWeapon.Value then
+			IsWeaponState = true
+		elseif not Options.OtherWeapon.Value then
+			IsWeaponState = false
+		end
+	end)
+
+	Options.OtherWeapon:SetValue(false)]]
+
     local PToggle = Tabs.Main:AddToggle("MyPToggle", {Title = "Player esp", Default = false })
 
 	PToggle:OnChanged(function()
 		local Players = game:GetService("Players")
 		local LocalPlayer = Players.LocalPlayer
 		local connections = {}
+		local Try = false
 
 		while Options.MyPToggle.Value do
 			Wait(0.1)
@@ -299,10 +324,76 @@ do
 					else
 						DistanceSay = " "
 					end
+					if IsRankState then
+						local RS = humanoid.Parent.Rank.Value
+						local CS = humanoid.Parent.Race.Value
+						if CS == "Ghoul" then
+							if RS == "1" then
+								IsRankSay = "\n".."C"
+							elseif RS == "2" then
+								IsRankSay = "\n".."B"	
+							elseif RS == "3" then
+								IsRankSay = "\n".."B+"	
+							elseif RS == "4" then
+								IsRankSay = "\n".."A"	
+							elseif RS == "5" then
+								IsRankSay = "\n".."A+"	
+							elseif RS == "6" then
+								IsRankSay = "\n".."S"	
+							elseif RS == "7" then
+								IsRankSay = "\n".."S+"	
+							elseif RS == "8" then
+								IsRankSay = "\n".."SS"
+							elseif RS == "9" then
+								IsRankSay = "\n".."SS+"	
+							elseif RS == "10" then
+								IsRankSay = "\n".."SSS"
+							elseif RS == "0" then
+								IsRankSay = "\n".."Freshie"
+							else
+								IsRankSay = "Failed to load"		
+							end
+						elseif CS == "Human" then
+							if RS == "0" then
+								IsRankSay = "\n".."Freshie"
+							elseif RS == "1" then
+								IsRankSay = "\n".."3 Rank"
+							elseif RS == "2" then
+								IsRankSay = "\n".."2 Rank"
+							elseif RS == "3" then
+								IsRankSay = "\n".."1 Rank"
+							elseif RS == "4" then
+								IsRankSay = "\n".."Second Class"
+							elseif RS == "5" then
+								IsRankSay = "\n".."Semi-Associate First"
+							elseif RS == "6" then
+								IsRankSay = "\n".."Associate First"
+							elseif RS == "7" then
+								IsRankSay = "\n".."First Class"
+							elseif RS == "8" then
+								IsRankSay = "\n".."Associate Special"
+							elseif RS == "9" then
+								IsRankSay = "\n".."Special Class"
+							else 
+								IsRankSay = "\n".."Failed to load"
+							end
+						end
+					else
+						IsRankSay = " "
+					end
+					--[[if IsWeapon then
+						local WS = humanoid.Parent.Type.Value
+						if WS = "Fists" and not Try then
+							WeaponSay = "\n".."Fists"
+						elseif WS 
+						end
+						
+						
+					end]]
 					local maxH = math.floor(humanoid.MaxHealth + 0.5)
 					local JustH = math.floor(humanoid.Health + 0.5)
 					local PName = humanoid.Parent.Name
-					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay
+					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay..IsRankSay
 					
 					botht.Text = fulltext
 					if ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 * 2) then 
@@ -565,5 +656,4 @@ Fluent:Notify({
 -- You can use the SaveManager:LoadAutoloadConfig() to load a config
 -- which has been marked to be one that auto loads!
 SaveManager:LoadAutoloadConfig()
-
 
