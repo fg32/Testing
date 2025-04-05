@@ -85,89 +85,113 @@ do
 
 			trackedNPCs[npcModel] = true
 
-			-- Основные компоненты
-			local humanoid = npcModel:FindFirstChildOfClass("Humanoid")
-			local head = npcModel:FindFirstChild("Head")
-			local ragdollColliders = npcModel:FindFirstChild("RagdollColliders")
+			-- Асинхронная загрузка компонентов
+			local humanoid, head, ragdollColliders
+			local function loadComponents()
+				humanoid = npcModel:FindFirstChildOfClass("Humanoid")
+				head = npcModel:FindFirstChild("Head")
+				ragdollColliders = npcModel:FindFirstChild("RagdollColliders")
+				return humanoid and head and humanoid.Parent ~= nil
+			end
 
-			-- Проверка минимальных требований
-			if not humanoid or not head then
+			if not loadComponents() then
 				trackedNPCs[npcModel] = nil
 				return
 			end
 
-			-- Проверка на существующий тег
-			if head:FindFirstChild("NPC_Nametag") then return end
+			-- Ожидание полной инициализации модели
+			local billboard
+			local tagCreationSuccess, tagError = pcall(function()
+				if not head:IsDescendantOf(workspace) then
+					error("Head not in workspace")
+				end
 
-			-- Создание визуальных элементов
-			local billboard = Instance.new("BillboardGui")
-			billboard.Name = "NPC_Nametag"
-			billboard.Adornee = head
-			billboard.Size = UDim2.new(4, 0, 1.5, 0)
-			billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-			billboard.AlwaysOnTop = true
+				-- Создание BillboardGui с проверкой родителя
+				billboard = Instance.new("BillboardGui")
+				billboard.Name = "NPC_Nametag"
+				billboard.Adornee = head
+				billboard.Size = UDim2.new(4, 0, 1.5, 0)
+				billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+				billboard.AlwaysOnTop = true
+				billboard.Parent = head
+			end)
 
+			if not tagCreationSuccess then
+				warn("Failed to create tag:", tagError)
+				trackedNPCs[npcModel] = nil
+				return
+			end
+
+			-- Создание текстовой метки
 			local textLabel = Instance.new("TextLabel")
 			textLabel.Size = UDim2.new(1, 0, 1, 0)
-			
+			textLabel.Text = "NPC"
 			textLabel.Font = Enum.Font.SourceSansBold
-			textLabel.TextSize = 10
+			textLabel.TextSize = 20
 			textLabel.TextColor3 = Color3.new(1, 1, 1)
 			textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
 			textLabel.TextStrokeTransparency = 0.5
 			textLabel.BackgroundTransparency = 1
 			textLabel.Parent = billboard
 
-			-- Функция проверки состояния NPC
-			local function isNPCValid()
-				return humanoid and humanoid.Health > 0 and not (ragdollColliders and #ragdollColliders:GetChildren() == 0)
+			-- Функция проверки состояния
+			local function isValidState()
+				return humanoid 
+					and humanoid.Health > 0 
+					and head 
+					and head:IsDescendantOf(workspace)
+					and not (ragdollColliders and #ragdollColliders:GetChildren() == 0)
 			end
-			local PontsNpc = " "
-			if npcModel.Race.Value == "Ghoul" then
-				PontsNpc = "GH"
-			elseif npcModel.Race.Value == "Human" then
-				PontsNpc = "HU"
-			else
-				PontsNpc = "Fail"
-			end
+
 			-- Обновление интерфейса
-			local function updateUI()
-				if not isNPCValid() then
+			local function safeUpdate()
+				if not billboard or not billboard.Parent then return end
+				if not isValidState() then
 					billboard:Destroy()
 					return
 				end
-			
-
-				local hps = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
-				textLabel.Text = PontsNpc.."\n" .. hps
-				textLabel.TextColor3 = humanoid.Health/humanoid.MaxHealth > 0.5 
-					and Color3.new(0,1,0) 
-					or Color3.new(1,0,0)
+				
+				local success, err = pcall(function()
+					local hps = string.format("%.0f / %.0f", humanoid.Health, humanoid.MaxHealth)
+					textLabel.Text = "NPC\n" .. hps
+					textLabel.TextColor3 = humanoid.Health/humanoid.MaxHealth > 0.5 
+						and Color3.new(0,1,0) 
+						or Color3.new(1,0,0)
+				end)
+				
+				if not success then
+					warn("Update failed:", err)
+				end
 			end
 
-			-- Обработчики событий
+			-- Очистка ресурсов
 			local function cleanUp()
-				billboard:Destroy()
 				if connections.npcConnections[npcModel] then
 					for _, conn in pairs(connections.npcConnections[npcModel]) do
 						conn:Disconnect()
 					end
 					connections.npcConnections[npcModel] = nil
 				end
+				
+				if billboard and billboard.Parent then
+					billboard:Destroy()
+				end
 				trackedNPCs[npcModel] = nil
 			end
 
 			-- Подписки на события
-			local conn1 = humanoid:GetPropertyChangedSignal("Health"):Connect(updateUI)
+			local conn1 = humanoid:GetPropertyChangedSignal("Health"):Connect(safeUpdate)
 			local conn2 = humanoid.Died:Connect(cleanUp)
-			local conn3 = ragdollColliders and ragdollColliders.ChildRemoved:Connect(updateUI)
-			local conn4 = game:GetService("RunService").Heartbeat:Connect(updateUI)
+			local conn3 = ragdollColliders and ragdollColliders.ChildRemoved:Connect(safeUpdate)
+			local conn4 = game:GetService("RunService").Heartbeat:Connect(safeUpdate)
+			local conn5 = npcModel.AncestryChanged:Connect(function(_, newParent)
+				if newParent == nil then cleanUp() end
+			end)
 
-			connections.npcConnections[npcModel] = {conn1, conn2, conn3, conn4}
+			connections.npcConnections[npcModel] = {conn1, conn2, conn3, conn4, conn5}
 
-			-- Первоначальная настройка
-			updateUI()
-			billboard.Parent = head
+			-- Первоначальный вызов
+			safeUpdate()
 		end
 
 		-- Обработчики добавления/удаления NPC
@@ -188,16 +212,16 @@ do
 		end
 
 		if Options.MyToggle.Value then
-			-- Инициализация для существующих NPC
+			-- Инициализация существующих NPC
 			for _, child in ipairs(NPCFolder:GetChildren()) do
 				handleChildAdded(child)
 			end
 
-			-- Подписка на новые события
+			-- Подписка на события
 			connections.childAdded = NPCFolder.ChildAdded:Connect(handleChildAdded)
 			connections.childRemoved = NPCFolder.ChildRemoved:Connect(handleChildRemoved)
 		else
-			-- Очистка при выключении
+			-- Полная очистка
 			if connections.childAdded then connections.childAdded:Disconnect() end
 			if connections.childRemoved then connections.childRemoved:Disconnect() end
 			
@@ -210,7 +234,9 @@ do
 			for _, npc in ipairs(NPCFolder:GetChildren()) do
 				if npc:FindFirstChild("Head") then
 					local tag = npc.Head:FindFirstChild("NPC_Nametag")
-					if tag then tag:Destroy() end
+					if tag then
+						tag:Destroy()
+					end
 				end
 			end
 			
