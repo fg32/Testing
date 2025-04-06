@@ -551,6 +551,116 @@ do
 	Options.MyPToggle:SetValue(false)
 
 
+	local ABToggle = Tabs.Main:AddToggle("ABOptions", {Title = "Auto block", Default = false })
+
+	ABToggle:OnChanged(function(parameters)
+		_G.AUTO_BLOCK = Options.ABOptions.Value
+
+		task.spawn(function()
+			local Players = game:GetService("Players")
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local LocalPlayer = Players.LocalPlayer
+
+			local RootPart = nil 
+			local lastComboValues = {} 
+
+			
+			local function updateCharacter()
+				local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+				RootPart = Character:WaitForChild("HumanoidRootPart") 
+			
+			end
+
+			
+			updateCharacter()
+			LocalPlayer.CharacterAdded:Connect(updateCharacter) 
+
+			
+			local function blockAction(state)
+				local args = {
+					[1] = {
+						[1] = {
+							["Module"] = "Block",
+							["Bool"] = state
+						},
+						[2] = "\5"
+					}
+				}
+				ReplicatedStorage:WaitForChild("Bridgenet2Main"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+			
+			end
+
+			
+			while true do
+				while not _G.AUTO_BLOCK do
+					task.wait(0.1) 
+				end
+
+				if not RootPart then 
+				
+				task.wait(0.1) 
+				continue 
+				
+				end 
+
+				local closestEntity = nil
+				local closestDistance = math.huge
+				local trackedEntities = {} 
+
+				for _, entity in pairs(workspace.Entities:GetChildren()) do
+					if entity:IsA("Model") and entity.Name ~= LocalPlayer.Name then
+						local humanoidRootPart = entity:FindFirstChild("HumanoidRootPart")
+						local combo = entity:FindFirstChild("Combo")
+
+						if humanoidRootPart and combo and combo:IsA("IntValue") then
+							local distance = (RootPart.Position - humanoidRootPart.Position).Magnitude
+							if distance < closestDistance then
+								closestDistance = distance
+								closestEntity = entity
+							end
+
+							
+							trackedEntities[entity] = true
+						end
+					end
+				end
+
+				
+				for entity in pairs(lastComboValues) do
+					if not trackedEntities[entity] then
+						lastComboValues[entity] = nil
+				
+					end
+				end
+
+				if closestEntity then
+			
+				end
+
+				if closestEntity and closestDistance < 12.2 then
+					local combo = closestEntity:FindFirstChild("Combo")
+					if combo then
+						local lastCombo = lastComboValues[closestEntity] or 0
+						local currentCombo = combo.Value
+
+						if currentCombo > 0 and currentCombo ~= lastCombo then
+				
+							task.wait(0.15) 
+							blockAction(true) 
+							task.wait(0.1) 
+							blockAction(false) 
+						end
+
+						lastComboValues[closestEntity] = currentCombo
+					end
+				end
+
+				task.wait() 
+			end
+		end)
+	end)
+
+	Options.MyPToggle:SetValue(false)
     
     local Slider = Tabs.Main:AddSlider("Slider", {
         Title = "Slider",
