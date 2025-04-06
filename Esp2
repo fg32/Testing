@@ -283,6 +283,18 @@ do
 
 	Options.OtherRank:SetValue(false)
 
+	local IsRace = Tabs.Main:AddToggle("OtherRace", {Title = "Show Race", Default = false })
+
+	IsRace:OnChanged(function(parameters)
+		if Options.OtherRace.Value then
+			IsRaceState = true
+		elseif not Options.OtherRace.Value then
+			IsRaceState = false
+		end
+	end)
+
+	Options.OtherRace:SetValue(false)
+
 	--[[local IsWeapon = Tabs.Main:AddToggle("OtherWeapon", {Title = "Show Weapon Type", Default = false })
 
 	IsWeapon:OnChanged(function(parameters)
@@ -295,245 +307,248 @@ do
 
 	Options.OtherWeapon:SetValue(false)]]
 
-    local PToggle = Tabs.Main:AddToggle("MyPToggle", {Title = "Player esp", Default = false })
+	local PToggle = Tabs.Main:AddToggle("MyPToggle", { Title = "Player esp", Default = false })
 
 	PToggle:OnChanged(function()
 		local Players = game:GetService("Players")
 		local LocalPlayer = Players.LocalPlayer
 		local connections = {}
-		local Try = false
+		local nametags = {}
 
-		while Options.MyPToggle.Value do
-			Wait(0.1)
-			local function createNametag(player)
-				if player == LocalPlayer then return end
+		-- Функция обновления текста
+		local function updateNametag(player, humanoid, head)
+			if not humanoid or not head then return end
 
-				local function attachToCharacter(character)
-					if not character:IsDescendantOf(workspace) then return end
-					
-					local humanoid = character:FindFirstChildOfClass("Humanoid")
-					if not humanoid or humanoid.Health <= 0 then return end
+			local tag = nametags[player]
+			if not tag or not tag.Parent then return end
 
-					-- Safety check for head
-					local head
-					pcall(function()
-						head = character:WaitForChild("Head", 2)
-					end)
-					if not head then return end
+			-- Ваши вычисления для текста
 
-					-- Remove old tag
+			-- ... (ваш существующий код для вычисления текста) ...
 
-
-					-- Create new BillboardGui
-					function namee(parameters)
-					
-						if not head:FindFirstChild(player.Name .. "_Nametag") then
-							local billboard = Instance.new("BillboardGui")
-							billboard.Name = player.Name .. "_Nametag"
-							billboard.Adornee = head
-							billboard.Size = UDim2.new(4, 0, 2.5, 0)
-							billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-							billboard.AlwaysOnTop = true
-							billboard.Active = true
-							billboard.ResetOnSpawn = false
-							billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-							-- Create TextLabel
-							local textLabel = Instance.new("TextLabel")
-							textLabel.Size = UDim2.new(1, 0, 1, 0)
-							textLabel.Text = "test"
-							textLabel.Font = Enum.Font.SourceSansBold
-							textLabel.TextSize = 14
-							textLabel.TextColor3 = Color3.new(1, 1, 1)
-							textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-							textLabel.TextStrokeTransparency = 0.5
-							textLabel.BackgroundTransparency = 1
-							textLabel.Parent = billboard
-							textLabel.TextWrapped = false
-
-							billboard.Parent = head
-						end
-					end
-
-				
-					
-					namee()
-					local tagg = head:FindFirstChild(player.Name .. "_Nametag")
-					local botht = tagg.TextLabel
-					if IsRaceState then
-						local RS = humanoid.Parent.Race.Value
-						RaceSay = "\n"..RS
+			if IsRaceState then
+				local RS = humanoid.Parent.Race.Value
+				RaceSay = "\n"..RS
+			else
+				RaceSay = " "
+			end
+			if IsHungerState then
+				local HS = math.floor(humanoid.Parent.Hunger.Value + 0.5)
+				HungerSay = "\n"..HS
+			else
+				HungerSay = " "
+			end
+			if IsDistanceState then
+				local DS = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - humanoid.Parent.HumanoidRootPart.Position).Magnitude)
+				DistanceSay = "\n"..DS.."m"
+			else
+				DistanceSay = " "
+			end
+			if IsRankState then
+				local RS = humanoid.Parent.Rank.Value
+				local CS = humanoid.Parent.Race.Value
+				if CS == "Ghoul" then
+					if RS == "1" then
+						IsRankSay = "\n".."C"
+					elseif RS == "2" then
+						IsRankSay = "\n".."B"	
+					elseif RS == "3" then
+						IsRankSay = "\n".."B+"	
+					elseif RS == "4" then
+						IsRankSay = "\n".."A"	
+					elseif RS == "5" then
+						IsRankSay = "\n".."A+"	
+					elseif RS == "6" then
+						IsRankSay = "\n".."S"	
+					elseif RS == "7" then
+						IsRankSay = "\n".."S+"	
+					elseif RS == "8" then
+						IsRankSay = "\n".."SS"
+					elseif RS == "9" then
+						IsRankSay = "\n".."SS+"	
+					elseif RS == "10" then
+						IsRankSay = "\n".."SSS"
+					elseif RS == "0" then
+						IsRankSay = "\n".."Freshie"
 					else
-						RaceSay = " "
+						IsRankSay = "Failed to load"		
 					end
-					if IsHungerState then
-						local HS = math.floor(humanoid.Parent.Hunger.Value + 0.5)
-						HungerSay = "\n"..HS
-					else
-						HungerSay = " "
+				elseif CS == "Human" then
+					if RS == "0" then
+						IsRankSay = "\n".."Freshie"
+					elseif RS == "1" then
+						IsRankSay = "\n".."3 Rank"
+					elseif RS == "2" then
+						IsRankSay = "\n".."2 Rank"
+					elseif RS == "3" then
+						IsRankSay = "\n".."1 Rank"
+					elseif RS == "4" then
+						IsRankSay = "\n".."Second Class"
+					elseif RS == "5" then
+						IsRankSay = "\n".."Semi-Associate First"
+					elseif RS == "6" then
+						IsRankSay = "\n".."Associate First"
+					elseif RS == "7" then
+						IsRankSay = "\n".."First Class"
+					elseif RS == "8" then
+						IsRankSay = "\n".."8 RANK IS REAL NO WAY"
+					elseif RS == "9" then
+						IsRankSay = "\n".."Associate Special"
+					elseif RS == "10" then
+						IsRankSay = "\n".."Special Class"
+					else 
+						IsRankSay = "\n".."Failed to load"
 					end
-					if IsDistanceState then
-						local DS = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - humanoid.Parent.HumanoidRootPart.Position).Magnitude)
-						DistanceSay = "\n"..DS.."m"
-					else
-						DistanceSay = " "
-					end
-					if IsRankState then
-						local RS = humanoid.Parent.Rank.Value
-						local CS = humanoid.Parent.Race.Value
-						if CS == "Ghoul" then
-							if RS == "1" then
-								IsRankSay = "\n".."C"
-							elseif RS == "2" then
-								IsRankSay = "\n".."B"	
-							elseif RS == "3" then
-								IsRankSay = "\n".."B+"	
-							elseif RS == "4" then
-								IsRankSay = "\n".."A"	
-							elseif RS == "5" then
-								IsRankSay = "\n".."A+"	
-							elseif RS == "6" then
-								IsRankSay = "\n".."S"	
-							elseif RS == "7" then
-								IsRankSay = "\n".."S+"	
-							elseif RS == "8" then
-								IsRankSay = "\n".."SS"
-							elseif RS == "9" then
-								IsRankSay = "\n".."SS+"	
-							elseif RS == "10" then
-								IsRankSay = "\n".."SSS"
-							elseif RS == "0" then
-								IsRankSay = "\n".."Freshie"
-							else
-								IsRankSay = "Failed to load"		
-							end
-						elseif CS == "Human" then
-							if RS == "0" then
-								IsRankSay = "\n".."Freshie"
-							elseif RS == "1" then
-								IsRankSay = "\n".."3 Rank"
-							elseif RS == "2" then
-								IsRankSay = "\n".."2 Rank"
-							elseif RS == "3" then
-								IsRankSay = "\n".."1 Rank"
-							elseif RS == "4" then
-								IsRankSay = "\n".."Second Class"
-							elseif RS == "5" then
-								IsRankSay = "\n".."Semi-Associate First"
-							elseif RS == "6" then
-								IsRankSay = "\n".."Associate First"
-							elseif RS == "7" then
-								IsRankSay = "\n".."First Class"
-							elseif RS == "8" then
-								IsRankSay = "\n".."8 RANK IS REAL NO WAY"
-							elseif RS == "9" then
-								IsRankSay = "\n".."Associate Special"
-							elseif RS == "10" then
-								IsRankSay = "\n".."Special Class"
-							else 
-								IsRankSay = "\n".."Failed to load"
-							end
-						end
-					else
-						IsRankSay = " "
-					end
-					--[[if IsWeapon then
-						local WS = humanoid.Parent.Type.Value
-						if WS = "Fists" and not Try then
-							WeaponSay = "\n".."Fists"
-						elseif WS 
-						end
-						
-						
-					end]]
-					local maxH = math.floor(humanoid.MaxHealth + 0.5)
-					local JustH = math.floor(humanoid.Health + 0.5)
-					local PName = humanoid.Parent.Name
-					local fulltext = PName.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay..IsRankSay
-					
-					botht.Text = fulltext
-					if ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 * 2) then 
-						botht.TextColor = BrickColor.new("Bright green")  -- no
-					elseif ((humanoid.Health) ) >= (humanoid.MaxHealth / 3 ) then
-						botht.TextColor = BrickColor.new("Bright yellow")  
-					elseif (humanoid.Health ) < (humanoid.MaxHealth / 3) then 
-						botht.TextColor = BrickColor.new("Bright red") end
-					
-
-					
-					local Textes head:FindFirstChild(player.Name .. "_Nametag")
-					
-					-- Track humanoid state
-					humanoid.Died:Connect(function()
-						if billboard then billboard:Destroy() end
-						Wait(5)
-						namee()
-					end)
 				end
-
-				local function characterAdded(character)
-					task.spawn(attachToCharacter, character)
-				end
-
-				if player.Character then
-					characterAdded(player.Character)
-				end
-				
-				connections[player] = {
-					player.CharacterAdded:Connect(characterAdded),
-					player.CharacterRemoving:Connect(function(char)
-						local head = char:FindFirstChild("Head")
-						if head then
-							local oldTag = head:FindFirstChild(player.Name .. "_Nametag")
-							if oldTag then oldTag:Destroy() end
-						end
-					end)
-				}
+			else
+				IsRankSay = " "
 			end
 
-			-- Existing players
+
+			local maxH = math.floor(humanoid.MaxHealth + 0.5)
+			local JustH = math.floor(humanoid.Health + 0.5)
+			local fulltext = player.Name.."\n"..JustH.." / "..maxH..RaceSay..HungerSay..DistanceSay..IsRankSay
+
+			tag.TextLabel.Text = fulltext
+			tag.TextLabel.TextColor = if JustH >= maxH/3*2 then BrickColor.new("Bright green")
+				elseif JustH >= maxH/3 then BrickColor.new("Bright yellow")
+				else BrickColor.new("Bright red")
+		end
+
+		-- Создание/удаление тегов
+		local function managePlayer(player)
+			if player == LocalPlayer then return end
+
+			local charConnections = {}
+			nametags[player] = nil
+
+			local function onCharacter(character)
+				-- Очистка предыдущих подключений
+				for _, c in pairs(charConnections) do c:Disconnect() end
+
+				local humanoid = character:WaitForChild("Humanoid", 2)
+				local head = character:WaitForChild("Head", 2)
+				if not humanoid or not head then return end
+
+				-- Создаем BillboardGui
+				if not nametags[player] then
+					local billboard = Instance.new("BillboardGui")
+					billboard.Name = player.Name.."_Nametag"
+					billboard.Adornee = head
+					billboard.Size = UDim2.new(4, 0, 2.5, 0)
+					billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+					billboard.AlwaysOnTop = true
+
+					local textLabel = Instance.new("TextLabel")
+					textLabel.Size = UDim2.new(1, 0, 1, 0)
+					textLabel.Font = Enum.Font.SourceSansBold
+					textLabel.Parent = billboard
+					textLabel.TextSize = 14
+					textLabel.TextColor3 = Color3.new(1, 1, 1)
+					textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+					textLabel.TextStrokeTransparency = 0.5
+					textLabel.BackgroundTransparency = 1
+
+					billboard.Parent = head
+					nametags[player] = billboard
+				end
+
+				-- Обновление при изменении здоровья
+				table.insert(charConnections, humanoid.HealthChanged:Connect(function()
+					updateNametag(player, humanoid, head)
+				end))
+
+				
+				-- Обновление при смерти 
+
+				coroutine.wrap(function()
+					while true do
+						updateNametag(player, humanoid, head)
+						wait(0.1)
+					end
+				end)()
+			
+
+				if IsRankState or IsHungerState or IsDistanceState or IsRaceState then
+					updateNametag(player, humanoid, head)
+				end
+
+				table.insert(charConnections, humanoid.Died:Connect(function()
+					if nametags[player] then
+						nametags[player]:Destroy()
+						nametags[player] = nil
+					end
+				end))
+
+				-- Первоначальное обновление
+				updateNametag(player, humanoid, head)
+			end
+
+			-- Подключение событий персонажа
+			if player.Character then
+				task.spawn(onCharacter, player.Character)
+			end
+			table.insert(charConnections, player.CharacterAdded:Connect(onCharacter))
+			connections[player] = charConnections
+		end
+
+		if Options.MyPToggle.Value then
+			-- Подключение существующих игроков
 			for _, player in ipairs(Players:GetPlayers()) do
-				if player ~= LocalPlayer then
-					createNametag(player)
-				end
+				managePlayer(player)
 			end
 
-			-- New players
-			Players.PlayerAdded:Connect(createNametag)
+			-- Обработка новых игроков
+			connections.playerAdded = Players.PlayerAdded:Connect(managePlayer)
 
-			-- Player leaving
-			Players.PlayerRemoving:Connect(function(player)
+			-- Обработка выходящих игроков
+			connections.playerRemoving = Players.PlayerRemoving:Connect(function(player)
+				if nametags[player] then
+					nametags[player]:Destroy()
+					nametags[player] = nil
+				end
 				if connections[player] then
-					for _, conn in pairs(connections[player]) do
-						conn:Disconnect()
-					end
+					for _, c in pairs(connections[player]) do c:Disconnect() end
 					connections[player] = nil
 				end
 			end)
-
-		end
-
-		-- Cleanup
-		for _, player in pairs(Players:GetPlayers()) do
-			if player.Character and player.Character:FindFirstChild("Head") then
-				local head = player.Character.Head
-				local tag = head:FindFirstChild(player.Name .. "_Nametag")
-				if tag then 
-				local others = tag:GetDescendants()
-				if connections[player] then
-					for _, conn in pairs(connections[player]) do
-						conn:Disconnect()
-					end
-					connections[player] = nil
-				end
-				tag:Destroy() 
+		else
+			-- Очистка
+			for player, tag in pairs(nametags) do
+				tag:Destroy()
+			end
+			for _, c in pairs(connections) do
+				if type(c) == "table" then
+					for _, conn in pairs(c) do conn:Disconnect() end
+				else
+					c:Disconnect()
 				end
 			end
 			
+			nametags = {}
+			connections = {}
+
+			for _, player in pairs(Players:GetPlayers()) do
+				if player.Character and player.Character:FindFirstChild("Head") then
+					local head = player.Character.Head
+					local tag = head:FindFirstChild(player.Name .. "_Nametag")
+					if tag then 
+					local others = tag:GetDescendants()
+					if connections[player] then
+						for _, conn in pairs(connections[player]) do
+							conn:Disconnect()
+						end
+						connections[player] = nil
+					end
+					tag:Destroy() 
+					end
+				end
+			end
+
 		end
 	end)
 
-    Options.MyPToggle:SetValue(false)
+	Options.MyPToggle:SetValue(false)
 
 
     
