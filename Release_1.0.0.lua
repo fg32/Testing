@@ -26,6 +26,8 @@ local RS = game:GetService("ReplicatedStorage")
 local WorldFolder = workspace.World
 local MarkersFolder = RS.Markers
 
+local Players = game:GetService("Players")
+
 
 -- ESP SETTINGS
 local ESPBGUIs = {} -- Stores BillboardGui instances
@@ -47,7 +49,9 @@ local IsNickname = true -- Cuz its start setting, so on true
 
 local IsColorByHP = false
 
+local ServerRequest_upvr = game.ReplicatedStorage.Remotes.ServerRequest
 
+local ServReqConnection
 
 do
 
@@ -69,7 +73,7 @@ do
 		end
 
 		if Options.AdminsNotifyToggle.Value == true then
-			PAddedAdminsCheck = game.Players.PlayerAdded:Connect(function(plr)
+			PAddedAdminsCheck = Players.PlayerAdded:Connect(function(plr)
 				if plr:GetRankInGroupAsync(15216379) >= 3 then
 					Fluent:Notify({
 						Title = `{plr:GetRoleInGroupAsync(15216379)} JOINED`,
@@ -280,7 +284,7 @@ do
 				local DistanceText
 				if IsDistance then
 					local HRP = char:FindFirstChild("HumanoidRootPart")
-					local SelfHRP = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+					local SelfHRP = Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
 					if not DistancesThread then
 						DistancesThread = task.spawn(function()
@@ -366,8 +370,8 @@ do
 
 		if Options.PESPsToggle.Value == true then
 			-- Enable ESP for anyone alr ingame
-			for i,plr in game.Players:GetChildren() do
-				if plr == game.Players.LocalPlayer then
+			for i,plr in Players:GetChildren() do
+				if plr == Players.LocalPlayer then
 					continue
 				end
 				CharactersLoadingConnections[plr.UserId] = plr.CharacterAdded:Connect(function(char)
@@ -393,8 +397,8 @@ do
 			end
 
 			-- AutoESP for new players
-			JoinConnection = game.Players.PlayerAdded:Connect(function(plr)
-				if plr == game.Players.LocalPlayer then
+			JoinConnection = Players.PlayerAdded:Connect(function(plr)
+				if plr == Players.LocalPlayer then
 					return
 				end
 				CharactersLoadingConnections[plr.UserId] = plr.CharacterAdded:Connect(function(char)
@@ -429,7 +433,7 @@ do
 			end)
 
 			-- AutoClearconnections
-			LeaveConnection = game.Players.PlayerRemoving:Connect(function(plr)
+			LeaveConnection = Players.PlayerRemoving:Connect(function(plr)
 				if CharactersLoadingConnections[plr.UserId] then
 					CharactersLoadingConnections[plr.UserId]:Disconnect()
 					CharactersLoadingConnections[plr.UserId] = nil
