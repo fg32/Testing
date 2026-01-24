@@ -86,7 +86,7 @@ do
 	
 	local ChestSpawnsConnection
 	
-	local ChestNotifyToggle = Tabs.Main:AddToggle("ChestsNotifyToggle", { Title = "Notify when Chest spawns", Default = true })
+	local ChestNotifyToggle = Tabs.Main:AddToggle("ChestsNotifyToggle", { Title = "Notify when Chest spawns", Default = false })
 
 	ChestNotifyToggle:OnChanged(function()
 		if ChestSpawnsConnection then
