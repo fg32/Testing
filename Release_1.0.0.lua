@@ -47,9 +47,7 @@ local IsNickname = true -- Cuz its start setting, so on true
 
 local IsColorByHP = false
 
-local ServerRequest_upvr = game.ReplicatedStorage.Remotes.ServerRequest
 
-local ServReqConnection
 
 do
 
